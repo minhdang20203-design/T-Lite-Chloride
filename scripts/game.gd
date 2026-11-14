@@ -30,6 +30,7 @@ var _chat_open := false
 var _leaving := false
 
 func _ready() -> void:
+	GameLog.info("Vao man choi — %s, peer id=%d" % ["host" if multiplayer.is_server() else "client", multiplayer.get_unique_id()])
 	# Sàn đấu (vẽ ô kẻ) + 4 bức tường.
 	var arena: Node2D = ArenaScript.new()
 	add_child(arena)
@@ -93,6 +94,7 @@ func _spawn_player(data) -> Node:
 	return p
 
 func _on_peer_joined(peer_id: int) -> void:
+	GameLog.info("P%d da vao phong, spawn nhan vat." % peer_id)
 	if multiplayer.is_server():
 		spawner.spawn(peer_id)
 		rpc("_chat_broadcast", "HỆ THỐNG", "P%d đã vào phòng." % peer_id)
@@ -101,6 +103,7 @@ func _on_peer_joined(peer_id: int) -> void:
 		client_id = peer_id
 
 func _on_peer_left(peer_id: int) -> void:
+	GameLog.info("P%d da roi phong." % peer_id)
 	if multiplayer.is_server():
 		var node := players_root.get_node_or_null("P%d" % peer_id)
 		if node != null:
@@ -111,6 +114,7 @@ func _on_peer_left(peer_id: int) -> void:
 func _on_server_left() -> void:
 	if _leaving:
 		return
+	GameLog.warn("Host da thoat, phong dong, ve menu.")
 	_leaving = true
 	Net.disconnect_peer()
 	(get_parent() as Node).show_menu()
@@ -139,12 +143,14 @@ func _chat_broadcast(sender: String, text: String) -> void:
 	if chat_log != null:
 		chat_log.text += "[%s] %s\n" % [sender, text]
 	print("[CHAT] [%s] %s" % [sender, text])
+	GameLog.info("[CHAT] [%s] %s" % [sender, text])
 	if text == "TEST_CHAT_MSG":
 		chat_seen = true
 
 func _on_leave_pressed() -> void:
 	if _leaving:
 		return
+	GameLog.info("Nhan 'Thoat phong', ve menu.")
 	_leaving = true
 	Net.disconnect_peer()
 	(get_parent() as Node).show_menu()

@@ -11,6 +11,8 @@ var game: Node2D = null
 var _test_joined := false # test client: đã kết nối server chưa
 
 func _ready() -> void:
+	GameLog.begin_session()
+	GameLog.info("Game khoi dong — T-Lite Chloride.")
 	var args := OS.get_cmdline_user_args()
 	if "--test-host" in args:
 		_run_headless_test("host")

@@ -45,6 +45,22 @@ máy còn lại hiện lại menu chính. Đây là hành vi đã chốt cho b�
 Lưu ý: 2 máy phải **cùng mạng LAN** (cùng Wi-Fi). Windows Firewall có thể hỏi
 quyền mạng cho Godot — chọn **Allow** (mạng Private). Cổng dùng: **8910/UDP**.
 
+## File log — khi gặp lỗi thì gửi file này
+
+Game ghi lại mọi sự kiện mạng + lỗi ra file:
+
+- **`game.log`** (log của game): `%APPDATA%\Godot\app_userdata\T-Lite Chloride\logs\game.log`
+  Ghi: mở phòng / vào phòng, ai vào ai ra, host thoát, đánh bù nhìn,
+  hồi sinh, chat, lỗi kết nối (kèm gợi ý: sai IP / host chưa mở phòng /
+  Firewall chặn UDP 8910).
+- **`godot.log`** (log của engine, Godot tự ghi): cùng thư mục trên.
+  Ghi lỗi của engine (vd lỗi script, lỗi load file).
+
+Khi chạy thử gặp lỗi: đóng game, mở thư mục trên, gửi cả 2 file
+`game.log` + `godot.log` (hoặc chụp đoạn cuối của chúng) cho Muse để sửa.
+Mỗi lần mở game sẽ ghi tiếp vào cuối file cũ, kèm dòng tiêu đề phiên mới
+có ngày giờ, nên nhớ ghi lại khoảng thời gian xảy ra lỗi.
+
 ## Cấu trúc project
 
 ```
@@ -53,6 +69,7 @@ project.godot             Cài đặt 2D, pixel art (texture filter nearest),
                           phím WASD/chuột/chat, autoload Net
 scripts/
   network.gd              Autoload Net: ENet host/join, tối đa 4 người
+  logger.gd               GameLog: ghi log ra user://logs/game.log
   main.gd                 Chuyển cảnh + test headless 2 máy (loopback)
   menu.gd                 Menu Host/Join
   game.gd                 Màn chơi: sàn, spawner, HUD, chat, thoát phòng

@@ -36,6 +36,7 @@ func take_damage(amount: int) -> void:
 	hp = maxi(hp - amount, 0)
 	if hp <= 0:
 		dead = true
+		GameLog.info("Bu nhin het mau, hoi sinh sau 2 giay.")
 		_respawn_later()
 
 # Người chơi gọi hàm này khi đánh trúng (tự gửi RPC lên server).
@@ -46,6 +47,7 @@ func _respawn_later() -> void:
 	await get_tree().create_timer(2.0).timeout
 	hp = MAX_HP
 	dead = false
+	GameLog.info("Bu nhin da hoi sinh, HP=%d." % MAX_HP)
 
 func _update_bar() -> void:
 	if not is_inside_tree():

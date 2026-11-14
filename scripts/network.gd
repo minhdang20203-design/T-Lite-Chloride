@@ -26,7 +26,9 @@ func host() -> void:
 	var p := ENetMultiplayerPeer.new()
 	var err := p.create_server(PORT, MAX_PLAYERS)
 	print("[Net] create_server err=", err)
+	GameLog.info("Mo phong (host) cong %d, toi da %d nguoi — err=%d" % [PORT, MAX_PLAYERS, err])
 	if err != OK:
+		GameLog.error("Mo phong that bai, err=" + str(err))
 		host_failed.emit()
 		return
 	peer = p
@@ -41,7 +43,9 @@ func join(ip: String) -> void:
 	var p := ENetMultiplayerPeer.new()
 	var err := p.create_client(ip.strip_edges(), PORT)
 	print("[Net] create_client err=", err)
+	GameLog.info("Vao phong tai IP %s, cong %d — err=%d" % [ip.strip_edges(), PORT, err])
 	if err != OK:
+		GameLog.error("Tao ket noi toi host that bai, err=" + str(err))
 		join_failed.emit()
 		return
 	peer = p
@@ -52,6 +56,7 @@ func join(ip: String) -> void:
 func disconnect_peer() -> void:
 	_disconnect_signals()
 	if peer != null:
+		GameLog.info("Ngat ket noi, ve menu.")
 		peer.close()
 		peer = null
 	multiplayer.multiplayer_peer = null
@@ -89,17 +94,22 @@ func _disconnect_signals() -> void:
 		multiplayer.server_disconnected.disconnect(_on_server_disconnected)
 
 func _on_peer_connected(peer_id: int) -> void:
+	GameLog.info("P%d da vao phong." % peer_id)
 	peer_joined.emit(peer_id)
 
 func _on_peer_disconnected(peer_id: int) -> void:
+	GameLog.info("P%d da roi phong." % peer_id)
 	peer_left.emit(peer_id)
 
 func _on_connected_to_server() -> void:
+	GameLog.info("Da ket noi toi host.")
 	joined.emit()
 
 func _on_connection_failed() -> void:
+	GameLog.error("Khong ket noi duoc toi host (sai IP / host chua mo phong / Firewall chan UDP 8910).")
 	join_failed.emit()
 
 # Chỉ client nhận được: host đã thoát -> phòng đóng.
 func _on_server_disconnected() -> void:
+	GameLog.warn("Host da thoat, phong dong.")
 	server_left.emit()
