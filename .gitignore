@@ -1,0 +1,12 @@
+# Godot 4
+.godot/
+
+# Export
+export_presets.cfg
+
+# Build / export
+build/
+exports/
+*.pck
+*.exe
+*.zip
