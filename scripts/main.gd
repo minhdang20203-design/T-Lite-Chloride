@@ -1,7 +1,8 @@
 extends Node
 # Root của game: chuyển qua lại giữa menu và màn chơi.
-# Test headless: chạy với tham số -- --test-host, -- --test-client hoặc
-# -- --test-solo để tự kiểm tra mà không cần mở cửa sổ.
+# Test headless: chạy với tham số -- --test-host, -- --test-client,
+# -- --test-solo, -- --test-fail hoặc -- --test-swing để tự kiểm tra
+# mà không cần mở cửa sổ.
 
 const MainMenuScene := preload("res://scenes/main_menu.tscn")
 const GameScene := preload("res://scenes/game.tscn")
@@ -22,6 +23,8 @@ func _ready() -> void:
 		_run_headless_test("solo")
 	elif "--test-fail" in args:
 		_run_headless_test("fail")
+	elif "--test-swing" in args:
+		_run_headless_test("swing")
 	else:
 		show_menu()
 
@@ -140,6 +143,35 @@ func _run_headless_test(mode: String) -> void:
 		print("[TEST] fail ve menu sau khi noi that bai: ", back_to_menu)
 		print("[TEST] fail-back-to-menu: ", "PASS" if back_to_menu else "FAIL")
 		print("[TEST_FAIL_DONE]")
+	elif mode == "swing":
+		# Kiểm tra đánh thường thật: đứng sát bù nhìn, ngắm đúng, vung kiếm.
+		start_solo()
+		await get_tree().create_timer(1.0).timeout
+		var me = game.get_player(1)
+		var dm = game.dummy
+		print("[TEST] swing nhan vat: ", me != null, ", bu nhin: ", dm != null)
+		# Cự ly gần (40px): kiếm với tới (tầm ~31px + nửa rộng bù nhìn 14px).
+		me.position = dm.position + Vector2(-40, 0)
+		me.test_aim_angle = (dm.position - me.position).angle()
+		var hp0: int = dm.hp
+		me._start_swing()
+		await get_tree().create_timer(0.12).timeout
+		var area = me.get_node("SwordPivot/SwordArea")
+		print("[TEST] swing monitoring=", area.monitoring, " overlapping=", area.get_overlapping_bodies().size())
+		await get_tree().create_timer(0.4).timeout
+		var hp1: int = dm.hp
+		print("[TEST] swing gan hp truoc=", hp0, " sau=", hp1)
+		print("[TEST] swing-gan: ", "PASS" if hp1 == hp0 - 10 else "FAIL")
+		# Cự ly xa (100px): kiếm không với tới, máu không đổi.
+		me.position = dm.position + Vector2(-100, 0)
+		me.test_aim_angle = (dm.position - me.position).angle()
+		var hp2: int = dm.hp
+		me._start_swing()
+		await get_tree().create_timer(0.5).timeout
+		var hp3: int = dm.hp
+		print("[TEST] swing xa hp truoc=", hp2, " sau=", hp3)
+		print("[TEST] swing-xa-khong-trung: ", "PASS" if hp3 == hp2 else "FAIL")
+		print("[TEST_SWING_DONE]")
 	else:
 		Net.joined.connect(_on_test_joined)
 		Net.join("127.0.0.1")

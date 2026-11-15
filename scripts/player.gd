@@ -19,6 +19,7 @@ var burst := 0.0 # 0..100
 var aim_angle := 0.0 # đồng bộ
 var swinging := false # đồng bộ
 var test_move_dir := Vector2.ZERO # chỉ dùng cho test headless
+var test_aim_angle = null # chỉ dùng cho test headless: ép góc ngắm thay cho chuột
 var offline_mode := false # chơi đơn: tự điều khiển, không cần authority mạng
 
 var _swing_timer := 0.0
@@ -62,8 +63,11 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if not _controls_mine():
 		return
-	# Ngắm theo chuột.
-	aim_angle = (get_global_mouse_position() - global_position).angle()
+	# Ngắm theo chuột (hoặc góc ép từ test headless).
+	if test_aim_angle != null:
+		aim_angle = test_aim_angle
+	else:
+		aim_angle = (get_global_mouse_position() - global_position).angle()
 	# Di chuyển WASD (hoặc hướng ép từ test headless).
 	var dir := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if test_move_dir != Vector2.ZERO:

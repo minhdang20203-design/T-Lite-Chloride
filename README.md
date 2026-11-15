@@ -114,6 +114,13 @@ scenes/
   chạy 0 lỗi. Hồi quy lỗi 15/11 (vào màn chơi lúc join chưa xong): tự về
   menu, 0 lần spam lỗi. Host chạy lại sau khi thêm solo: không đổi
   (local-damage PASS, 0 lỗi).
+- **Sửa lỗi đánh không ra sát thương 15/11:** bù nhìn trong `dummy.tscn`
+  thiếu hẳn CollisionShape2D (hình va chạm chỉ khai báo mà không gắn vào
+  node) nên vùng kiếm không bao giờ chạm được nó; nhân vật cũng thiếu hình
+  va chạm thân và sàn đấu chưa có tường vật lý. Đã gắn đủ hình va chạm
+  (bù nhìn 28×28, nhân vật r=10) + 4 tường sàn layer 4. Kiểm chứng
+  headless: vung kiếm ở cự ly 40px thì bù nhìn 500 → 490, ở 100px thì
+  không trúng; solo/host chạy lại không đổi.
 - **Chưa kiểm chứng được trong VM:** đồng bộ 2 máy (vị trí, máu bù nhìn,
   chat) — VM chặn `UDP send` nên client ENet không kết nối được
   (lỗi `Sending failed!` + `PermissionError` khi thử socket UDP bằng
