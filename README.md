@@ -35,6 +35,11 @@ nội dung tự làm mới hoàn toàn. Engine: **Godot 4.7** (GDScript).
 - **Map nhà thờ:** sàn đá cẩm thạch, thảm đỏ giữa sàn, cửa kính màu dọc
   2 mép, 4 cột đá làm vật cản, chi tiết bánh răng + nốt nhạc ở rìa.
   Bù nhìn tập đánh dời ra góc sàn (200, 200) để test sát thương.
+  **Map mới (Gemini, 15/11):** `scripts/arena.gd` viết lại theo thiết kế
+  `THIET_KE_MAP.md`, lưới 32×32, tự nạp 13 tile ảnh từ `assets/map/`
+  (đá cẩm thạch, thảm, cửa kính, cột, bánh răng, nốt nhạc); tile viền đá
+  quá tối nên không dùng ảnh, vẽ bằng code. Khi chạy game in dòng
+  `[Map] Da nap 13/14 tile anh`.
 - HUD thêm: ô hồi chiêu 3 kỹ năng, thanh HP boss + tên phase + trạng thái
   bộ phận đã phá, nhắc "Bấm F — FULL BURST SẴN SÀNG!" khi Burst đầy.
 - Log (game.log) ghi: boss đổi phase, bộ phận bị phá, Tụ lực bị ngắt /
@@ -209,6 +214,12 @@ scenes/
     `--test-host` như cũ (local-damage PASS, dummy-hp-sync PASS).
   - GameLog ghi đủ: đổi phase, phá bộ phận, Tụ lực bị ngắt/hồi máu,
     Full Burst, chết/hồi sinh, thắng.
+  - **Map mới (Gemini, 15/11):** import 0 lỗi, arena.gd check-only
+    sạch, chạy solo in `[Map] Da nap 13/14 tile anh`; hồi quy skills
+    7/7, boss 10/10, boss-atk 6/6, swing/solo/fail/host như cũ.
+    **Lưu ý:** 13 file tile PNG là binary nên không đẩy được lên repo
+    qua công cụ hiện tại — bản đầy đủ (kèm tile) nằm trong file zip giao
+    cho Minhdak; repo chỉ có code, thiếu tile thì map tự vẽ bằng code.
 - **Chưa kiểm chứng được trong VM:** đồng bộ 2 máy (vị trí, máu bù nhìn,
   boss, chat, Full Burst đội ngũ) — VM chặn `UDP send` nên client ENet
   không kết nối được (lỗi `Sending failed!` + `PermissionError` khi thử
