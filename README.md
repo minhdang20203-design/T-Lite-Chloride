@@ -100,12 +100,36 @@ scenes/
 - Host test headless: ENet server bind thành công, spawn nhân vật host,
   bù nhìn HP 500 → 490 sau `take_damage(10)`, chạy 30 giây với
   **0 lỗi / 0 cảnh báo**.
+- **Sửa lỗi 15/11 (vào màn chơi khi chưa nối được host):** đã kiểm chứng lại
+  trong VM sau khi sửa — host chạy 0 lỗi, nhân vật host spawn đủ, bù nhìn
+  500 → 490; client nối thất bại thì dọn peer chết ngay, thoát sạch, không
+  còn spam lỗi `get_unique_id`. Đồng bộ 2 máy vẫn phải kiểm chứng trên
+  Windows.
 - **Chưa kiểm chứng được trong VM:** đồng bộ 2 máy (vị trí, máu bù nhìn,
   chat) — VM chặn `UDP send` nên client ENet không kết nối được
   (lỗi `Sending failed!` + `PermissionError` khi thử socket UDP bằng
   Python). Phần này **bắt buộc kiểm chứng trên Windows 2 máy** theo
   mục "Kiểm chứng 2 máy" ở trên. Chưa chạy được trên Windows ở đây nên
   không khẳng định gì về Windows.
+
+## Sửa lỗi 15/11/2026 — vào màn chơi khi chưa nối được host
+
+Lỗi gặp trên Windows: bấm Host rồi bấm Vào phòng (Join) mà chưa nối được host,
+nút **Bắt đầu chơi** vẫn hiện (do lần host trước để lại) → bấm vào thì vào màn
+chơi rỗng, không có nhân vật, không di chuyển được, console spam lỗi
+"The multiplayer instance isn't currently active" (game.gd gọi
+`multiplayer.get_unique_id()` mỗi khung hình trong khi peer đã chết).
+
+Đã sửa:
+
+- Menu ẩn nút **Bắt đầu chơi** mỗi khi bắt đầu lượt Host/Join mới hoặc khi
+  thất bại — chỉ hiện lại khi host/join thành công thật.
+- Nối host thất bại thì dọn peer chết ngay (`network.gd`), và nếu đang ở màn
+  chơi thì tự về menu.
+- `game.gd` chỉ gọi `get_unique_id()` khi peer đang nối thật.
+
+**Thử trên 1 máy:** mở game 2 cửa sổ (1 cửa sổ bấm Host, cửa sổ kia nhập
+`127.0.0.1` rồi Join) — không cần 2 máy vẫn kiểm tra được đồng bộ.
 
 ## GĐ tiếp theo (GĐ2)
 

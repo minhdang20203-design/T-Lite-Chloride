@@ -19,7 +19,15 @@ func _set_status(text: String) -> void:
 func _show_enter() -> void:
 	$VBox/EnterButton.visible = true
 
+# Ẩn nút "Bắt đầu chơi" mỗi khi bắt đầu lượt host/join mới hoặc thất bại —
+# tránh vào màn chơi khi chưa có kết nối thật (lỗi 15/11: nút còn hiện sau
+# khi ngắt host nên client bấm vào màn chơi lúc join chưa nối được).
+func _hide_enter() -> void:
+	$VBox/EnterButton.visible = false
+	$VBox/IpLabel.visible = false
+
 func _on_host_pressed() -> void:
+	_hide_enter()
 	_set_status("Đang tạo phòng...")
 	Net.host()
 
@@ -30,6 +38,7 @@ func _on_host_started() -> void:
 	_show_enter()
 
 func _on_host_failed() -> void:
+	_hide_enter()
 	_set_status("Không tạo được phòng (cổng %d đang bận?)." % Net.PORT)
 
 func _on_join_pressed() -> void:
@@ -37,6 +46,7 @@ func _on_join_pressed() -> void:
 	if ip.is_empty():
 		_set_status("Nhập IP của host trước đã.")
 		return
+	_hide_enter()
 	_set_status("Đang kết nối tới %s..." % ip)
 	Net.join(ip)
 
@@ -45,6 +55,7 @@ func _on_joined() -> void:
 	_show_enter()
 
 func _on_join_failed() -> void:
+	_hide_enter()
 	_set_status("Không kết nối được. Kiểm tra IP, cùng mạng LAN và tường lửa (cổng %d)." % Net.PORT)
 
 func _on_enter_pressed() -> void:

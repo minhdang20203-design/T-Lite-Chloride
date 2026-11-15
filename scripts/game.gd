@@ -30,7 +30,10 @@ var _chat_open := false
 var _leaving := false
 
 func _ready() -> void:
-	GameLog.info("Vao man choi — %s, peer id=%d" % ["host" if multiplayer.is_server() else "client", multiplayer.get_unique_id()])
+	var my_id := 0
+	if _is_connected():
+		my_id = multiplayer.get_unique_id()
+	GameLog.info("Vao man choi — %s, peer id=%d" % ["host" if multiplayer.is_server() else "client", my_id])
 	# Sàn đấu (vẽ ô kẻ) + 4 bức tường.
 	var arena: Node2D = ArenaScript.new()
 	add_child(arena)
@@ -62,11 +65,12 @@ func _ready() -> void:
 	Net.peer_joined.connect(_on_peer_joined)
 	Net.peer_left.connect(_on_peer_left)
 	Net.server_left.connect(_on_server_left)
+	Net.join_failed.connect(_on_join_failed)
 
 func _process(_delta: float) -> void:
 	if count_label == null:
 		return # HUD chưa build xong
-	if local_player == null:
+	if local_player == null and _is_connected():
 		local_player = get_player(multiplayer.get_unique_id())
 	if local_player != null:
 		hp_bar.value = local_player.hp
@@ -77,6 +81,13 @@ func _process(_delta: float) -> void:
 		if c is Player:
 			count += 1
 	count_label.text = "Người chơi: %d/4" % count
+
+# Chỉ gọi multiplayer.get_unique_id() khi peer đang nối thật — peer chết
+# (nối host thất bại) mà gọi sẽ spam lỗi "multiplayer instance isn't
+# currently active" mỗi khung hình.
+func _is_connected() -> bool:
+	var p := multiplayer.multiplayer_peer
+	return p != null and p.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED
 
 # Vị trí spawn theo peer id (đứng thành hàng ngang giữa sàn).
 func spawn_position(peer_id: int) -> Vector2:
@@ -119,6 +130,16 @@ func _on_server_left() -> void:
 	Net.disconnect_peer()
 	(get_parent() as Node).show_menu()
 
+# Nối host thất bại trong lúc đang ở màn chơi -> về menu, không ở lại
+# màn chơi rỗng.
+func _on_join_failed() -> void:
+	if _leaving:
+		return
+	GameLog.warn("Ket noi host that bai, ve menu.")
+	_leaving = true
+	Net.disconnect_peer()
+	(get_parent() as Node).show_menu()
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("chat"):
 		if not _chat_open:
@@ -134,6 +155,8 @@ func _send_chat() -> void:
 	chat_input.release_focus()
 	_chat_open = false
 	if text.is_empty():
+		return
+	if not _is_connected():
 		return
 	var sender := "P%d" % multiplayer.get_unique_id()
 	rpc("_chat_broadcast", sender, text)

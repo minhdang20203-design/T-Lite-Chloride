@@ -107,6 +107,7 @@ func _on_connected_to_server() -> void:
 
 func _on_connection_failed() -> void:
 	GameLog.error("Khong ket noi duoc toi host (sai IP / host chua mo phong / Firewall chan UDP 8910).")
+	disconnect_peer() # dọn peer chết để get_unique_id() không spam lỗi
 	join_failed.emit()
 
 # Chỉ client nhận được: host đã thoát -> phòng đóng.
