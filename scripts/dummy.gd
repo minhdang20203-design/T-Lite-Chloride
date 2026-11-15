@@ -41,7 +41,8 @@ func take_damage(amount: int) -> void:
 		_respawn_later()
 
 # Người chơi gọi hàm này khi đánh trúng (tự gửi RPC lên server).
-func request_damage(amount: int) -> void:
+# effect chỉ dùng cho boss (vd "stun"), bù nhìn bỏ qua.
+func request_damage(amount: int, effect: String = "") -> void:
 	if offline_mode:
 		take_damage(amount) # chơi đơn: không có mạng, áp dụng trực tiếp
 		return

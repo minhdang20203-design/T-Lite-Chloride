@@ -6,7 +6,7 @@ class_name GameLog
 # Godot tự ghi thêm file godot.log (lỗi của engine) trong cùng thư mục.
 
 const LOG_PATH := "user://logs/game.log"
-const GAME_VERSION := "GĐ1"
+const GAME_VERSION := "GĐ2"
 
 static var _started := false
 

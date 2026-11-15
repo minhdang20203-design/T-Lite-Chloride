@@ -1,9 +1,46 @@
-# T-Lite Chloride — GĐ1: Nền online co-op
+# T-Lite Chloride — GĐ2: Prototype gameplay (boss Altoilia + Full Burst)
 
 Game 2D co-op top-down pixel art, lấy cảm hứng cơ chế PvE của Toram Online,
 nội dung tự làm mới hoàn toàn. Engine: **Godot 4.7** (GDScript).
 
-## GĐ1 làm được gì (nền online, chưa có boss/cây kỹ năng)
+## GĐ2 làm được gì (prototype gameplay — boss Altoilia + Full Burst)
+
+- **Cây Kiếm 3 chiêu** (phím 1/2/3, số liệu theo GDD §3): Chém mạnh
+  (25 dmg / 10 MP / hồi chiêu 3s), Đập choáng (12 dmg + choáng boss 1.5s /
+  8 MP / 8s — để ngắt chiêu Tụ lực), Hồi sức (+20 HP / 15 MP / 12s).
+  Hồi chiêu từng chiêu hiện trên HUD. Thiếu MP hoặc đang hồi chiêu thì
+  không dùng được.
+- **Né lướt** (Shift hoặc Space): lướt 128px theo hướng di chuyển (đứng yên
+  thì lướt theo hướng ngắm), bất tử 0.3s, hồi chiêu 1.5s, không tốn MP.
+- **Đỡ** (giữ chuột phải, chỉ Kiếm): giảm 60% sát thương nhận trong 0.5s,
+  hồi chiêu 2s. Khi đỡ có vòng cung xanh trước mặt.
+- **Boss Altoilia** (HP 600, ở giữa sàn): đủ 6 chiêu — Gai đất (15 dmg +
+  hất ngã), AoE tròn (20 dmg, nổ sau 1.5s), Sóng nhạc (12 dmg + làm chậm,
+  3 vòng lan ra, khe giữa 2 vòng an toàn), Tia laser (25 dmg + hất văng,
+  quét ngang sàn), Lốc xoáy (10 dmg/giây, chỉ phase cuối), Tụ lực
+  (đứng yên 3s, hồi 20% HP nếu không bị Đập choáng ngắt). Mỗi chiêu đều
+  có vùng đỏ báo trước (telegraph).
+- **3 phase:** 100–50% (Gai đất + AoE), 50–25% (thêm Sóng nhạc + Tia
+  laser), dưới 25% (thêm Lốc xoáy + biến hình + đánh nhanh hơn).
+- **Phá bộ phận** (mỗi bộ phận 100 HP): cánh hoa → mất Lốc xoáy; đàn
+  nhạc → mất Sóng nhạc; lõi máy → mất Tia laser; vương miện → mất Tụ lực.
+- **Full Burst** (phím F): khi thanh Burst trung bình cả đội đạt 100%
+  (chơi đơn: thanh của mình 100%) thì bấm được, tối đa 2 lần/trận boss.
+  Chuỗi 3 giây: cả đội bất tử, boss bị khóa, mỗi người tung 1 đòn rồi đòn
+  kết hợp cuối. Sát thương: solo ~85, 2 người ~130, 4 người ~250.
+  Sau Burst: cả đội -20% sát thương 5 giây, boss Choáng 2 giây.
+- **Thắng/thua:** boss hết HP → hiện "Đã đánh bại Altoilia!" + nút về
+  menu. Người chơi hết HP → hồi sinh sau 3s tại điểm spawn với đầy HP
+  (boss giữ nguyên HP) để test tiếp.
+- **Map nhà thờ:** sàn đá cẩm thạch, thảm đỏ giữa sàn, cửa kính màu dọc
+  2 mép, 4 cột đá làm vật cản, chi tiết bánh răng + nốt nhạc ở rìa.
+  Bù nhìn tập đánh dời ra góc sàn (200, 200) để test sát thương.
+- HUD thêm: ô hồi chiêu 3 kỹ năng, thanh HP boss + tên phase + trạng thái
+  bộ phận đã phá, nhắc "Bấm F — FULL BURST SẴN SÀNG!" khi Burst đầy.
+- Log (game.log) ghi: boss đổi phase, bộ phận bị phá, Tụ lực bị ngắt /
+  hồi máu xong, kích hoạt Full Burst, thắng/thua, hồi sinh.
+
+## GĐ1 làm được gì (nền online)
 
 - Menu: **Tạo phòng (Host)** hoặc **Vào phòng (Join)** bằng IP của host.
   Host xem IP của mình ngay trên menu để gửi cho bạn.
@@ -76,22 +113,52 @@ scripts/
   logger.gd               GameLog: ghi log ra user://logs/game.log
   main.gd                 Chuyển cảnh + test headless 2 máy (loopback)
   menu.gd                 Menu Host/Join
-  game.gd                 Màn chơi: sàn, spawner, HUD, chat, thoát phòng
-  player.gd               Nhân vật: di chuyển, ngắm, vung kiếm, HP/MP/Burst
+  game.gd                 Màn chơi: sàn, spawner, HUD, chat, thoát phòng,
+                          boss, Full Burst, thắng/thua
+  player.gd               Nhân vật: di chuyển, ngắm, vung kiếm, HP/MP/Burst,
+                          Kiếm 3 chiêu, né, đỡ, chết/hồi sinh
   dummy.gd                Bù nhìn: HP đồng bộ, RPC nhận sát thương
-  arena.gd                Vẽ sàn đấu kẻ ô
+  boss.gd                 Boss Altoilia: AI, 6 chiêu, telegraph, phase
+  boss_part.gd            Bộ phận boss: HP riêng, phá được
+  arena.gd                Vẽ sàn đấu nhà thờ (cẩm thạch, kính màu, cột đá)
   placeholder_art.gd      Texture pixel tự vẽ bằng code
 scenes/
   main_menu.tscn  game.tscn  player.tscn  dummy.tscn
 ```
 
-## Số liệu GĐ1 (theo GDD §3, placeholder)
+## Số liệu GĐ2 (theo GDD §3/§5/§6; số tạm liệt kê riêng ở dưới)
 
-- Nhân vật: HP 100, MP 50, tốc chạy 200 px/s (~3.2 ô/s).
+- Nhân vật: HP 100, MP 50, tốc chạy 200 px/s (~3.2 ô/s), DEF 0.
 - Đánh thường: 10 sát thương/đòn, hồi 4 MP khi trúng, hồi chiêu 0.45s.
-- Burst: +1 điểm / 50 sát thương gây ra (thang 0–100).
-  GĐ1 chỉ tích Burst, **chưa kích hoạt Full Burst** (sang GĐ2).
+- Kiếm 1 "Chém mạnh": 25 dmg / 10 MP / hồi chiêu 3s.
+- Kiếm 2 "Đập choáng": 12 dmg + choáng boss 1.5s / 8 MP / hồi chiêu 8s.
+- Kiếm 3 "Hồi sức": +20 HP / 15 MP / hồi chiêu 12s.
+- Né: lướt 128px, bất tử 0.3s, hồi chiêu 1.5s, không tốn MP.
+- Đỡ: giảm 60% sát thương trong 0.5s, hồi chiêu 2s.
+- Burst: +1 điểm / 50 sát thương gây ra, +1 điểm / 30 HP hồi (thang 0–100).
+- Full Burst: tổng sát thương = 50 + 30n + 5n² (n = số người sống lúc
+  kích hoạt): 1 người 85, 2 người 130, 4 người 250. Tối đa 2 lần/trận.
+  Sau Burst: cả đội -20% sát thương 5s, boss Choáng 2s.
+- Boss Altoilia: HP 600. Gai đất 15, AoE tròn 20, Sóng nhạc 12, Tia
+  laser 25, Lốc xoáy 10/giây, Tụ lực hồi 120 HP (20%).
 - Bù nhìn: HP 500.
+
+### Số tạm (không có trong GDD, tự chọn để test, chỉnh sau)
+
+- Bộ phận boss: 100 HP mỗi cái.
+- Thời gian báo trước (telegraph): Gai đất 0.8s, AoE tròn 1.5s
+  (phase 3: 0.7s / 1.2s), Tia laser 0.8s.
+- Thời gian chờ giữa các chiêu của boss: 1.6s (phase 1), 1.3s (phase 2),
+  0.9s (phase 3); chờ 2s đầu trận rồi boss mới đánh.
+- Sóng nhạc: 3 vòng, cách nhau 130px, rộng 40px, lan 220px/s, xa nhất 520px.
+- Tia laser: dài 850px, quét 100 độ trong 1.4s.
+- Lốc xoáy: 55px/s, bán kính 48px, tồn tại 6s.
+- Tụ lực: chỉ dùng khi boss dưới 90% HP và vương miện còn nguyên.
+- Sau mỗi lần bị choáng, boss kháng choáng 4s (chống spam ngắt).
+- Chiêu boss không bị cột đá chặn (telegraph xuyên qua cột — đơn giản hóa
+  cho bản prototype).
+- Đỡ: bấm chuột phải là kích hoạt cửa sổ đỡ 0.5s (không cần giữ đủ 0.5s).
+- Người chơi chết thì hồi sinh 1 mình sau 3s (chưa có thua cả đội).
 
 ## Trạng thái kiểm chứng (14/11/2026)
 
@@ -121,12 +188,36 @@ scenes/
   (bù nhìn 28×28, nhân vật r=10) + 4 tường sàn layer 4. Kiểm chứng
   headless: vung kiếm ở cự ly 40px thì bù nhìn 500 → 490, ở 100px thì
   không trúng; solo/host chạy lại không đổi.
+- **GĐ2 (15/11):** kiểm chứng headless trong VM, 0 lỗi:
+  - `--test-skills`: Kiếm 1 gây 25 dmg (bù nhìn 500→475, MP 50→44),
+    Kiếm 2 gây 12 dmg (475→463, MP 50→46), Kiếm 3 hồi 20 HP (50→70,
+    MP 50→35); đang hồi chiêu / thiếu MP thì không dùng được; né lướt
+    145px + bất tử; đỡ giảm 60% (nhận 20 → mất 8 HP, 100→92).
+  - `--test-boss`: đánh thường trúng boss qua kiếm (600→590); đổi phase
+    ở 300 HP (phase 2) và 150 HP (phase 3), hồi máu không lùi phase;
+    phá cánh hoa → mất Lốc xoáy, phá 3 bộ phận còn lại → mất Sóng nhạc /
+    Tia laser / Tụ lực; Tụ lực bị Đập choáng ngắt (không hồi máu);
+    Full Burst solo gây 84 dmg (388→304), dùng 1 lần, Burst về 0;
+    chết → hồi sinh sau 3s đầy HP (100), boss giữ HP; thắng → banner
+    "Đã đánh bại Altoilia!" hiện.
+  - `--test-boss-atk`: 6 chiêu gây đúng số lên người chơi — Gai đất
+    100→85, AoE 100→80, Sóng nhạc 100→64 (3 vòng × 12), Tia laser
+    100→75, Lốc xoáy 100→90 (1 tick 10 dmg), Tụ lực hồi 300→420.
+  - `--test-ai`: boss tự chạy AI, 4 chiêu trong 12s, người chơi 100→35.
+  - Hồi quy cũ: `--test-swing` PASS (40px trúng, 100px không trúng),
+    `--test-solo` PASS, `--test-fail` PASS (về menu, 0 spam lỗi),
+    `--test-host` như cũ (local-damage PASS, dummy-hp-sync PASS).
+  - GameLog ghi đủ: đổi phase, phá bộ phận, Tụ lực bị ngắt/hồi máu,
+    Full Burst, chết/hồi sinh, thắng.
 - **Chưa kiểm chứng được trong VM:** đồng bộ 2 máy (vị trí, máu bù nhìn,
-  chat) — VM chặn `UDP send` nên client ENet không kết nối được
-  (lỗi `Sending failed!` + `PermissionError` khi thử socket UDP bằng
-  Python). Phần này **bắt buộc kiểm chứng trên Windows 2 máy** theo
-  mục "Kiểm chứng 2 máy" ở trên. Chưa chạy được trên Windows ở đây nên
-  không khẳng định gì về Windows.
+  boss, chat, Full Burst đội ngũ) — VM chặn `UDP send` nên client ENet
+  không kết nối được (lỗi `Sending failed!` + `PermissionError` khi thử
+  socket UDP bằng Python). Phần này **bắt buộc kiểm chứng trên Windows
+  2 máy** theo mục "Kiểm chứng 2 máy" ở trên. Chưa chạy được trên
+  Windows ở đây nên không khẳng định gì về Windows. Boss AI / chiêu /
+  Full Burst trên mạng cũng chưa kiểm chứng 2 máy (chỉ kiểm chứng solo
+  trong VM); cấu trúc đã làm theo hướng server-authoritative (AI + sát
+  thương boss chỉ chạy trên host, chiêu báo qua RPC, HP đồng bộ).
 
 ## Sửa lỗi 15/11/2026 — vào màn chơi khi chưa nối được host
 
@@ -147,7 +238,8 @@ chơi rỗng, không có nhân vật, không di chuyển được, console spam 
 **Thử trên 1 máy:** mở game 2 cửa sổ (1 cửa sổ bấm Host, cửa sổ kia nhập
 `127.0.0.1` rồi Join) — không cần 2 máy vẫn kiểm tra được đồng bộ.
 
-## GĐ tiếp theo (GĐ2)
+## GĐ tiếp theo (GĐ3)
 
-Cây Kiếm 3 chiêu (Chém mạnh / Đập choáng / Hồi sức), né (dash), đỡ,
-boss đầu Altoilia đủ moveset, kích hoạt Full Burst đội ngũ.
+Đủ 4 nhánh vũ khí (Kiếm/Cung/Phép/Tay không) + nhánh Hỗ trợ, đồ rớt,
+nâng cấp/tinh luyện, lưu game JSON. Sau đó GĐ4: thêm map, quái, nhiều
+boss, chế đồ, nhiệm vụ; mở Thương + Song kiếm.

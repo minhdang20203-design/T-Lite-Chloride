@@ -1,8 +1,8 @@
 extends Node
 # Root của game: chuyển qua lại giữa menu và màn chơi.
 # Test headless: chạy với tham số -- --test-host, -- --test-client,
-# -- --test-solo, -- --test-fail hoặc -- --test-swing để tự kiểm tra
-# mà không cần mở cửa sổ.
+# -- --test-solo, -- --test-fail, -- --test-swing, -- --test-skills,
+# -- --test-boss hoặc -- --test-boss-atk để tự kiểm tra mà không cần mở cửa sổ.
 
 const MainMenuScene := preload("res://scenes/main_menu.tscn")
 const GameScene := preload("res://scenes/game.tscn")
@@ -25,6 +25,14 @@ func _ready() -> void:
 		_run_headless_test("fail")
 	elif "--test-swing" in args:
 		_run_headless_test("swing")
+	elif "--test-skills" in args:
+		_run_headless_test("skills")
+	elif "--test-boss" in args:
+		_run_headless_test("boss")
+	elif "--test-boss-atk" in args:
+		_run_headless_test("boss-atk")
+	elif "--test-ai" in args:
+		_run_headless_test("ai")
 	else:
 		show_menu()
 
@@ -172,6 +180,215 @@ func _run_headless_test(mode: String) -> void:
 		print("[TEST] swing xa hp truoc=", hp2, " sau=", hp3)
 		print("[TEST] swing-xa-khong-trung: ", "PASS" if hp3 == hp2 else "FAIL")
 		print("[TEST_SWING_DONE]")
+	elif mode == "skills":
+		# Kiểm tra cây Kiếm 3 chiêu + né + đỡ trên bù nhìn.
+		start_solo()
+		await get_tree().create_timer(1.0).timeout
+		var me = game.get_player(1)
+		var dm = game.dummy
+		print("[TEST] skills nhan vat: ", me != null, ", bu nhin: ", dm != null)
+		# Đứng sát bù nhìn, ngắm đúng.
+		me.position = dm.position + Vector2(-40, 0)
+		me.test_aim_angle = (dm.position - me.position).angle()
+		# Kiếm 1: 25 dmg, tốn 10 MP (đánh trúng hồi lại 4 MP -> còn 44), hồi chiêu 3s.
+		var hp0: int = dm.hp
+		var mp0: int = me.mp
+		var ok1: bool = me.cast_skill(1)
+		await get_tree().create_timer(0.4).timeout
+		print("[TEST] skill1 cast=", ok1, " hp ", hp0, "->", dm.hp, " (expect -25), mp ", mp0, "->", me.mp, " (expect 44)")
+		print("[TEST] skill1: ", "PASS" if ok1 and dm.hp == hp0 - 25 and me.mp == 44 else "FAIL")
+		# Kiếm 1 đang hồi chiêu thì không dùng lại được.
+		var ok1b: bool = me.cast_skill(1)
+		print("[TEST] skill1-trong-hoi-chieu cast=", ok1b, " (expect false)")
+		print("[TEST] skill1-cd-block: ", "PASS" if not ok1b else "FAIL")
+		# Kiếm 2: 12 dmg, tốn 8 MP (đánh trúng hồi lại 4 MP -> còn 46).
+		me.mp = 50
+		var hp1: int = dm.hp
+		var ok2: bool = me.cast_skill(2)
+		await get_tree().create_timer(0.4).timeout
+		print("[TEST] skill2 cast=", ok2, " hp ", hp1, "->", dm.hp, " (expect -12), mp 50->", me.mp, " (expect 46)")
+		print("[TEST] skill2: ", "PASS" if ok2 and dm.hp == hp1 - 12 and me.mp == 46 else "FAIL")
+		# Kiếm 3: hồi 20 HP, tốn 15 MP.
+		me.hp = 50
+		me.mp = 50
+		var ok3: bool = me.cast_skill(3)
+		print("[TEST] skill3 cast=", ok3, " hp 50->", me.hp, " (expect 70), mp 50->", me.mp, " (expect 35)")
+		print("[TEST] skill3: ", "PASS" if ok3 and me.hp == 70 and me.mp == 35 else "FAIL")
+		# Thiếu MP thì không dùng được (xóa hồi chiêu trước để test đúng MP).
+		me.mp = 5
+		me.skill_cd[1] = 0.0
+		var ok4: bool = me.cast_skill(1)
+		print("[TEST] skill1-thieu-mp cast=", ok4, " (expect false)")
+		print("[TEST] skill1-mp-block: ", "PASS" if not ok4 else "FAIL")
+		# Né lướt: 128px + bất tử 0.3s (chờ 0.15s: lướt 128px + đi thường ~6px).
+		me.mp = 50
+		me.position = Vector2(800, 500)
+		me.test_move_dir = Vector2.RIGHT
+		me.test_aim_angle = 0.0
+		var x0: float = me.position.x
+		me._try_dash()
+		await get_tree().create_timer(0.15).timeout
+		me.test_move_dir = Vector2.ZERO
+		var dx: float = me.position.x - x0
+		print("[TEST] dash dx=", dx, " (expect 100..160), invuln=", me._invuln_timer > 0.0)
+		print("[TEST] dash: ", "PASS" if dx > 100.0 and dx < 160.0 and me._invuln_timer > 0.0 else "FAIL")
+		# Đỡ: giảm 60% sát thương nhận (20 -> 8).
+		me.position = Vector2(800, 500)
+		me.hp = 100
+		me._invuln_timer = 0.0
+		me._try_block()
+		var block_on: bool = me.blocking
+		me.take_damage(20, Vector2.ZERO, 0.0)
+		print("[TEST] block on=", block_on, " hp 100->", me.hp, " (expect 92)")
+		print("[TEST] block: ", "PASS" if block_on and me.hp == 92 else "FAIL")
+		print("[TEST_SKILLS_DONE]")
+	elif mode == "boss":
+		# Kiểm tra boss Altoilia: nhận sát thương, đổi phase, phá bộ phận,
+		# Tụ lực bị ngắt, Full Burst, hồi sinh, thắng.
+		start_solo()
+		await get_tree().create_timer(1.0).timeout
+		var me = game.get_player(1)
+		var boss = game.boss
+		boss.ai_enabled = false # tắt AI để boss không đánh trong lúc kiểm tra
+		print("[TEST] boss ton tai: ", boss != null, ", hp=", boss.hp if boss != null else -1, " (expect 600), phase=", boss.phase if boss != null else -1)
+		# 1. Đánh thường trúng boss qua kiếm (đứng sát, ngắm đúng, tránh bộ phận).
+		me.position = boss.position + Vector2(-50, 30)
+		me.test_aim_angle = (boss.position - me.position).angle()
+		var bhp0: int = boss.hp
+		me._start_swing()
+		await get_tree().create_timer(0.4).timeout
+		print("[TEST] boss swing hp ", bhp0, "->", boss.hp, " (expect -10)")
+		print("[TEST] boss-swing: ", "PASS" if boss.hp == bhp0 - 10 else "FAIL")
+		# 2. Đổi phase: 300 -> phase 2, 150 -> phase 3; hồi máu không lùi phase.
+		boss.debug_set_hp(300)
+		print("[TEST] boss phase o 300hp: ", boss.phase, " (expect 2)")
+		print("[TEST] boss-phase2: ", "PASS" if boss.phase == 2 else "FAIL")
+		boss.debug_set_hp(150)
+		print("[TEST] boss phase o 150hp: ", boss.phase, " (expect 3)")
+		print("[TEST] boss-phase3: ", "PASS" if boss.phase == 3 else "FAIL")
+		boss.debug_set_hp(270)
+		print("[TEST] boss phase sau khi hoi len 270hp: ", boss.phase, " (expect 3)")
+		print("[TEST] boss-phase-khong-lui: ", "PASS" if boss.phase == 3 else "FAIL")
+		# 3. Phá bộ phận: cánh hoa (100 HP) -> mất Lốc xoáy.
+		var flower = boss.get_part("flower")
+		flower.take_damage(100, "")
+		await get_tree().create_timer(0.2).timeout
+		var pool: Array = boss.available_attacks()
+		print("[TEST] pha canh hoa: broken=", flower.broken, ", pool con tornado=", "tornado" in pool, " (expect true/false)")
+		print("[TEST] boss-part-flower: ", "PASS" if flower.broken and not ("tornado" in pool) else "FAIL")
+		# Phá 3 bộ phận còn lại -> mất Sóng nhạc, Tia laser, Tụ lực.
+		boss.get_part("music").take_damage(100, "")
+		boss.get_part("core").take_damage(100, "")
+		boss.get_part("crown").take_damage(100, "")
+		await get_tree().create_timer(0.2).timeout
+		pool = boss.available_attacks()
+		print("[TEST] pha 3 bo phan con lai: rings=", "rings" in pool, " laser=", "laser" in pool, " charge=", "charge" in pool, " (expect false/false/false)")
+		print("[TEST] boss-parts-rest: ", "PASS" if not ("rings" in pool) and not ("laser" in pool) and not ("charge" in pool) else "FAIL")
+		# 4. Tụ lực bị Đập choáng ngắt: ép boss tụ lực, dùng Kiếm 2 vào boss.
+		boss.debug_set_hp(400)
+		boss.debug_start_attack("charge")
+		await get_tree().create_timer(0.5).timeout
+		var charging: bool = boss._attack.get("id", "") == "charge"
+		me.position = boss.position + Vector2(-50, 30)
+		me.test_aim_angle = (boss.position - me.position).angle()
+		me.mp = 50
+		me.skill_cd[2] = 0.0
+		var bhp1: int = boss.hp
+		me.cast_skill(2)
+		await get_tree().create_timer(0.5).timeout
+		var charge_gone: bool = boss._attack.is_empty()
+		print("[TEST] charge dang chay: ", charging, ", sau skill2: attack rong=", charge_gone, " hp ", bhp1, "->", boss.hp, " (expect -12, khong hoi mau)")
+		print("[TEST] boss-charge-interrupt: ", "PASS" if charging and charge_gone and boss.hp == bhp1 - 12 else "FAIL")
+		# 5. Full Burst: thanh Burst 100 -> kích hoạt, gây ~84 dmg (solo: 2 đòn x 42).
+		me.burst = 100.0
+		var bhp2: int = boss.hp
+		game.request_burst()
+		await get_tree().create_timer(3.5).timeout
+		print("[TEST] burst uses=", game.burst_uses, " (expect 1), boss hp ", bhp2, "->", boss.hp, " (expect -84), burst cua minh=", me.burst, " (expect 0)")
+		print("[TEST] burst: ", "PASS" if game.burst_uses == 1 and boss.hp == bhp2 - 84 and me.burst == 0.0 else "FAIL")
+		# 6. Hồi sinh: người chơi chết -> 3s sau hồi sinh đầy HP, boss giữ HP.
+		me.hp = 5
+		me._invuln_timer = 0.0
+		me.take_damage(20, Vector2.ZERO, 0.0)
+		var died: bool = me.dead
+		var bhp3: int = boss.hp
+		await get_tree().create_timer(3.5).timeout
+		print("[TEST] chet: ", died, ", sau 3.5s: dead=", me.dead, " hp=", me.hp, " (expect 100), boss hp=", boss.hp, " (expect ", bhp3, ")")
+		print("[TEST] respawn: ", "PASS" if died and not me.dead and me.hp == 100 and boss.hp == bhp3 else "FAIL")
+		# 7. Thắng: boss hết HP -> banner thắng hiện.
+		# (Xóa debuff kiệt sức sau Burst để cú đánh gây đủ 10 dmg.)
+		me._weakened_timer = 0.0
+		boss.debug_set_hp(10)
+		me.position = boss.position + Vector2(-50, 30)
+		me.test_aim_angle = (boss.position - me.position).angle()
+		me._start_swing()
+		await get_tree().create_timer(0.5).timeout
+		print("[TEST] boss hp=", boss.hp, " dead=", boss.dead, " boss_defeated=", game.boss_defeated, " banner=", game.win_banner.visible)
+		print("[TEST] win: ", "PASS" if boss.dead and game.boss_defeated and game.win_banner.visible else "FAIL")
+		print("[TEST_BOSS_DONE]")
+	elif mode == "boss-atk":
+		# Kiểm tra 6 chiêu của boss gây sát thương thật lên người chơi.
+		# Tắt AI để boss chỉ dùng chiêu được ép; trước mỗi chiêu reset vị trí/HP.
+		start_solo()
+		await get_tree().create_timer(1.0).timeout
+		var me = game.get_player(1)
+		var boss = game.boss
+		boss.ai_enabled = false
+		var reset_player := func(pos: Vector2) -> void:
+			me.position = pos
+			me.hp = 100
+			me.dead = false
+			me._invuln_timer = 0.0
+			me._stagger_timer = 0.0
+			me._slow_timer = 0.0
+			me._kb_timer = 0.0
+		# 1. Gai đất: người chơi đứng trên đường gai -> 15 dmg.
+		reset_player.call(boss.position + Vector2(300, 0))
+		boss.debug_start_attack("spikes")
+		await get_tree().create_timer(1.2).timeout
+		print("[TEST] spikes hp 100->", me.hp, " (expect 85)")
+		print("[TEST] atk-spikes: ", "PASS" if me.hp == 85 else "FAIL")
+		# 2. AoE tròn: vòng đỏ nổ tại chỗ người chơi đứng -> 20 dmg.
+		reset_player.call(boss.position + Vector2(300, 0))
+		boss.debug_start_attack("aoe")
+		await get_tree().create_timer(2.0).timeout
+		print("[TEST] aoe hp 100->", me.hp, " (expect 80)")
+		print("[TEST] atk-aoe: ", "PASS" if me.hp == 80 else "FAIL")
+		# 3. Sóng nhạc: 3 vòng lan ra, người chơi đứng yên trúng cả 3 -> 36 dmg.
+		reset_player.call(boss.position + Vector2(300, 0))
+		boss.debug_start_attack("rings")
+		await get_tree().create_timer(3.5).timeout
+		print("[TEST] rings hp 100->", me.hp, " (expect 64)")
+		print("[TEST] atk-rings: ", "PASS" if me.hp == 64 else "FAIL")
+		# 4. Tia laser: quét qua chỗ người chơi đứng -> 25 dmg.
+		reset_player.call(boss.position + Vector2(300, 0))
+		boss.debug_start_attack("laser")
+		await get_tree().create_timer(2.8).timeout
+		print("[TEST] laser hp 100->", me.hp, " (expect 75)")
+		print("[TEST] atk-laser: ", "PASS" if me.hp == 75 else "FAIL")
+		# 5. Lốc xoáy: lốc đi tới chỗ người chơi, tick 10 dmg sau ~2.6s.
+		reset_player.call(boss.position + Vector2(200, 0))
+		boss.debug_start_attack("tornado")
+		await get_tree().create_timer(3.0).timeout
+		print("[TEST] tornado hp 100->", me.hp, " (expect 90, 1 tick)")
+		print("[TEST] atk-tornado: ", "PASS" if me.hp == 90 else "FAIL")
+		# 6. Tụ lực không bị ngắt: boss hồi 120 HP sau 3s.
+		boss.debug_set_hp(300)
+		boss.debug_start_attack("charge")
+		await get_tree().create_timer(3.5).timeout
+		print("[TEST] charge heal hp 300->", boss.hp, " (expect 420)")
+		print("[TEST] atk-charge-heal: ", "PASS" if boss.hp == 420 else "FAIL")
+		print("[TEST_BOSS_ATK_DONE]")
+	elif mode == "ai":
+		# Kiểm tra AI boss tự chạy: không ép chiêu, để boss tự chọn chiêu.
+		# Người chơi đứng yên ở điểm spawn (boss sẽ nhắm vào đó).
+		start_solo()
+		await get_tree().create_timer(12.0).timeout
+		var boss = game.boss
+		var me = game.get_player(1)
+		print("[TEST] ai attacks_started=", boss.attacks_started, " (expect >= 2), boss hp=", boss.hp, ", player hp=", me.hp if me != null else -1)
+		print("[TEST] ai-autonomous: ", "PASS" if boss.attacks_started >= 2 else "FAIL")
+		print("[TEST_AI_DONE]")
 	else:
 		Net.joined.connect(_on_test_joined)
 		Net.join("127.0.0.1")
