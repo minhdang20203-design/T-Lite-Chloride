@@ -1,7 +1,7 @@
 extends Node
 # Root của game: chuyển qua lại giữa menu và màn chơi.
-# Test headless: chạy với tham số -- --test-host hoặc -- --test-client
-# để tự kiểm tra kết nối ENet mà không cần mở cửa sổ.
+# Test headless: chạy với tham số -- --test-host, -- --test-client hoặc
+# -- --test-solo để tự kiểm tra mà không cần mở cửa sổ.
 
 const MainMenuScene := preload("res://scenes/main_menu.tscn")
 const GameScene := preload("res://scenes/game.tscn")
@@ -18,6 +18,10 @@ func _ready() -> void:
 		_run_headless_test("host")
 	elif "--test-client" in args:
 		_run_headless_test("client")
+	elif "--test-solo" in args:
+		_run_headless_test("solo")
+	elif "--test-fail" in args:
+		_run_headless_test("fail")
 	else:
 		show_menu()
 
@@ -32,14 +36,19 @@ func show_menu() -> void:
 		menu = MainMenuScene.instantiate()
 		add_child(menu)
 
-# Vào màn chơi sau khi host/join thành công.
-func start_game() -> void:
+# Vào màn chơi sau khi host/join thành công, hoặc chơi đơn (không cần mạng).
+func start_game(offline: bool = false) -> void:
 	if menu != null:
 		menu.queue_free()
 		menu = null
 	if game == null:
 		game = GameScene.instantiate()
+		game.offline_mode = offline
 		add_child(game)
+
+# Chơi đơn: vào màn chơi ngay, không cần mạng.
+func start_solo() -> void:
+	start_game(true)
 
 func _wait_flag(getter: Callable, timeout: float) -> bool:
 	var waited := 0.0
@@ -92,6 +101,45 @@ func _run_headless_test(mode: String) -> void:
 		var chat_ok: bool = await _wait_flag(func() -> bool: return game != null and game.chat_seen, 8.0)
 		print("[TEST] chat: ", "PASS" if chat_ok else "FAIL")
 		print("[TEST_HOST_DONE]")
+	elif mode == "solo":
+		start_solo()
+		await get_tree().create_timer(1.0).timeout
+		var solo_count := 0
+		for c in game.players_root.get_children():
+			if c is Player:
+				solo_count += 1
+		print("[TEST] solo player count=", solo_count, " (expect 1)")
+		var me = game.get_player(1)
+		print("[TEST] solo tim thay nhan vat: ", me != null)
+		var start_x := 0.0
+		if me != null:
+			start_x = me.position.x
+			me.test_move_dir = Vector2.RIGHT
+		await get_tree().create_timer(1.2).timeout
+		if me != null:
+			me.test_move_dir = Vector2.ZERO
+		var moved := 0.0
+		if me != null:
+			moved = me.position.x - start_x
+		print("[TEST] solo di chuyen dx=", moved)
+		print("[TEST] solo-move: ", "PASS" if moved > 50.0 else "FAIL")
+		var hp_before: int = game.dummy.hp
+		game.dummy.request_damage(10)
+		await get_tree().create_timer(0.5).timeout
+		var hp_after: int = game.dummy.hp
+		print("[TEST] solo dummy hp truoc=", hp_before, " sau=", hp_after)
+		print("[TEST] solo-dummy-damage: ", "PASS" if hp_after == hp_before - 10 else "FAIL")
+		print("[TEST_SOLO_DONE]")
+	elif mode == "fail":
+		# Hồi quy lỗi 15/11: vào màn chơi lúc join chưa nối được host —
+		# không được spam lỗi, phải tự về menu khi nối thất bại.
+		Net.join("127.0.0.1")
+		start_game() # giả lập bấm "Bắt đầu chơi" khi join chưa xong
+		await get_tree().create_timer(5.0).timeout
+		var back_to_menu: bool = game == null and menu != null
+		print("[TEST] fail ve menu sau khi noi that bai: ", back_to_menu)
+		print("[TEST] fail-back-to-menu: ", "PASS" if back_to_menu else "FAIL")
+		print("[TEST_FAIL_DONE]")
 	else:
 		Net.joined.connect(_on_test_joined)
 		Net.join("127.0.0.1")

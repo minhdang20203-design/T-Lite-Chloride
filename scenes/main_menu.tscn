@@ -58,6 +58,10 @@ text = "Vào phòng (Join)"
 custom_minimum_size = Vector2(0, 44)
 text = "Bắt đầu chơi"
 
+[node name="SoloButton" type="Button" parent="VBox"]
+custom_minimum_size = Vector2(0, 44)
+text = "Chơi đơn (Solo)"
+
 [node name="StatusLabel" type="Label" parent="VBox"]
 text = "Chọn Tạo phòng hoặc nhập IP rồi Vào phòng."
 horizontal_alignment = 1

@@ -5,6 +5,7 @@ func _ready() -> void:
 	$VBox/HostButton.pressed.connect(_on_host_pressed)
 	$VBox/JoinButton.pressed.connect(_on_join_pressed)
 	$VBox/EnterButton.pressed.connect(_on_enter_pressed)
+	$VBox/SoloButton.pressed.connect(_on_solo_pressed)
 	$VBox/EnterButton.visible = false
 	$VBox/IpLabel.visible = false
 	Net.host_started.connect(_on_host_started)
@@ -60,3 +61,6 @@ func _on_join_failed() -> void:
 
 func _on_enter_pressed() -> void:
 	(get_parent() as Node).start_game()
+
+func _on_solo_pressed() -> void:
+	(get_parent() as Node).start_solo()

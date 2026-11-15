@@ -23,6 +23,7 @@ var chat_input: LineEdit
 var leave_button: Button
 
 var local_player: Player = null
+var offline_mode := false # chơi đơn: không cần mạng, tự tạo nhân vật
 var client_joined := false # host: đã có client vào phòng (dùng cho test)
 var client_id := 0
 var chat_seen := false # host: đã nhận được chat TEST_CHAT_MSG (dùng cho test)
@@ -33,7 +34,8 @@ func _ready() -> void:
 	var my_id := 0
 	if _is_connected():
 		my_id = multiplayer.get_unique_id()
-	GameLog.info("Vao man choi — %s, peer id=%d" % ["host" if multiplayer.is_server() else "client", my_id])
+	var role := "choi don" if offline_mode else ("host" if multiplayer.is_server() else "client")
+	GameLog.info("Vao man choi — %s, peer id=%d" % [role, my_id])
 	# Sàn đấu (vẽ ô kẻ) + 4 bức tường.
 	var arena: Node2D = ArenaScript.new()
 	add_child(arena)
@@ -44,6 +46,7 @@ func _ready() -> void:
 
 	# Bù nhìn tập đánh — có sẵn trên mọi máy (cùng node path để gọi RPC).
 	dummy = DummyScene.instantiate()
+	dummy.offline_mode = offline_mode
 	dummy.position = Vector2(ARENA_W / 2, 350)
 	add_child(dummy)
 
@@ -51,17 +54,23 @@ func _ready() -> void:
 	players_root = Node2D.new()
 	players_root.name = "Players"
 	add_child(players_root)
-	spawner = MultiplayerSpawner.new()
-	add_child(spawner) # cho spawner vào cây TRƯỚC khi đặt spawn_path
-	spawner.spawn_path = players_root.get_path()
-	spawner.add_spawnable_scene("res://scenes/player.tscn")
-	spawner.spawn_function = _spawn_player
+	if offline_mode:
+		# Chơi đơn: không có mạng, tạo nhân vật trực tiếp, không qua spawner.
+		var p := _spawn_player(1) as Player
+		p.offline_mode = true
+		players_root.add_child(p)
+		local_player = p
+	else:
+		spawner = MultiplayerSpawner.new()
+		add_child(spawner) # cho spawner vào cây TRƯỚC khi đặt spawn_path
+		spawner.spawn_path = players_root.get_path()
+		spawner.add_spawnable_scene("res://scenes/player.tscn")
+		spawner.spawn_function = _spawn_player
+		# Host tự spawn cho mình; client nối vào thì spawn thêm.
+		if multiplayer.is_server():
+			spawner.spawn(1)
 
 	_build_hud()
-
-	# Host tự spawn cho mình; client nối vào thì spawn thêm.
-	if multiplayer.is_server():
-		spawner.spawn(1)
 	Net.peer_joined.connect(_on_peer_joined)
 	Net.peer_left.connect(_on_peer_left)
 	Net.server_left.connect(_on_server_left)
@@ -141,6 +150,8 @@ func _on_join_failed() -> void:
 	(get_parent() as Node).show_menu()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if offline_mode:
+		return # chơi đơn không có chat (chat chỉ dùng khi chơi mạng)
 	if event.is_action_pressed("chat"):
 		if not _chat_open:
 			_chat_open = true

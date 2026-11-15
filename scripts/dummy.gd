@@ -12,6 +12,7 @@ var hp := MAX_HP:
 		_update_bar()
 
 var dead := false # chỉ server quản lý
+var offline_mode := false # chơi đơn: áp dụng sát thương trực tiếp, không qua RPC
 
 func _enter_tree() -> void:
 	# Đồng bộ HP từ server (authority mặc định là server).
@@ -29,7 +30,7 @@ func _ready() -> void:
 # RPC: bất kỳ peer nào cũng gọi được, nhưng chỉ server áp dụng.
 @rpc("any_peer")
 func take_damage(amount: int) -> void:
-	if not multiplayer.is_server():
+	if not offline_mode and not multiplayer.is_server():
 		return
 	if dead:
 		return
@@ -41,6 +42,9 @@ func take_damage(amount: int) -> void:
 
 # Người chơi gọi hàm này khi đánh trúng (tự gửi RPC lên server).
 func request_damage(amount: int) -> void:
+	if offline_mode:
+		take_damage(amount) # chơi đơn: không có mạng, áp dụng trực tiếp
+		return
 	rpc_id(1, "take_damage", amount)
 
 func _respawn_later() -> void:

@@ -13,6 +13,9 @@ nội dung tự làm mới hoàn toàn. Engine: **Godot 4.7** (GDScript).
 - **Bù nhìn tập đánh**: HP đồng bộ cả phòng — 2 người cùng đánh thì máu giảm
   giống nhau trên cả 2 màn hình. Hết máu thì hồi sinh sau 2 giây để test tiếp.
 - **Chat nhanh** trong phòng: bấm Enter để gõ, Enter lần nữa để gửi.
+- **Chơi đơn (Solo)** (thêm 15/11): bấm nút "Chơi đơn (Solo)" trên menu để vào
+  màn chơi ngay, không cần mạng — di chuyển, đánh bù nhìn, HUD đầy đủ.
+  Chat chỉ dùng khi chơi mạng.
 - Art placeholder tự vẽ bằng code (`scripts/placeholder_art.gd`), không dùng
   asset của Toram hay game nào khác.
 
@@ -27,7 +30,8 @@ máy còn lại hiện lại menu chính. Đây là hành vi đã chốt cho b�
    https://godotengine.org/download — giải nén là chạy, không cần cài đặt.
 2. Mở Godot → **Import** → chọn thư mục project này → **Open**.
 3. Bấm **F5** (hoặc nút Play) để chạy game.
-4. Cửa sổ game 1280x720. Chơi 1 mình vẫn vào phòng được (host rồi bắt đầu chơi).
+4. Cửa sổ game 1280x720. Muốn chơi đơn thì bấm nút **Chơi đơn (Solo)** trên
+   menu — vào màn chơi ngay, không cần host hay nhập IP.
 
 ## Kiểm chứng 2 máy (mốc kiểm chứng GĐ1)
 
@@ -105,6 +109,11 @@ scenes/
   500 → 490; client nối thất bại thì dọn peer chết ngay, thoát sạch, không
   còn spam lỗi `get_unique_id`. Đồng bộ 2 máy vẫn phải kiểm chứng trên
   Windows.
+- **Chơi đơn 15/11:** kiểm chứng headless trong VM — nhân vật solo spawn đủ
+  (1 người), di chuyển sang phải 240px sau 1,2 giây, đánh bù nhìn 500 → 490,
+  chạy 0 lỗi. Hồi quy lỗi 15/11 (vào màn chơi lúc join chưa xong): tự về
+  menu, 0 lần spam lỗi. Host chạy lại sau khi thêm solo: không đổi
+  (local-damage PASS, 0 lỗi).
 - **Chưa kiểm chứng được trong VM:** đồng bộ 2 máy (vị trí, máu bù nhìn,
   chat) — VM chặn `UDP send` nên client ENet không kết nối được
   (lỗi `Sending failed!` + `PermissionError` khi thử socket UDP bằng

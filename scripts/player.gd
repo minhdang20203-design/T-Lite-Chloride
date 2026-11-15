@@ -19,6 +19,7 @@ var burst := 0.0 # 0..100
 var aim_angle := 0.0 # đồng bộ
 var swinging := false # đồng bộ
 var test_move_dir := Vector2.ZERO # chỉ dùng cho test headless
+var offline_mode := false # chơi đơn: tự điều khiển, không cần authority mạng
 
 var _swing_timer := 0.0
 var _cooldown := 0.0
@@ -29,6 +30,11 @@ const PLAYER_COLORS := [
 	Color(0.95, 0.35, 0.3), # P3 đỏ
 	Color(0.95, 0.75, 0.15), # P4 vàng
 ]
+
+# Chơi đơn: không có mạng nên không có authority — nhân vật của mình thì
+# mình tự điều khiển, không cần chờ server cấp quyền.
+func _controls_mine() -> bool:
+	return offline_mode or is_multiplayer_authority()
 
 func _enter_tree() -> void:
 	# Cấu hình đồng bộ sớm (trước khung hình đầu tiên).
@@ -47,14 +53,14 @@ func _ready() -> void:
 	$NameLabel.position = Vector2(-32, -38)
 	$NameLabel.size = Vector2(64, 16)
 	# Chỉ nhân vật của mình mới có camera.
-	$Camera2D.enabled = is_multiplayer_authority()
-	if is_multiplayer_authority():
+	$Camera2D.enabled = _controls_mine()
+	if _controls_mine():
 		$Camera2D.make_current()
 	$SwordPivot/SwordArea.monitoring = false
 	$SwordPivot/SwordArea.body_entered.connect(_on_sword_body_entered)
 
 func _physics_process(delta: float) -> void:
-	if not is_multiplayer_authority():
+	if not _controls_mine():
 		return
 	# Ngắm theo chuột.
 	aim_angle = (get_global_mouse_position() - global_position).angle()
@@ -73,7 +79,7 @@ func _process(delta: float) -> void:
 	# Xoay kiếm theo hướng ngắm; khi vung thì quét một vòng cung.
 	var offset := 0.0
 	if swinging:
-		if is_multiplayer_authority():
+		if _controls_mine():
 			_swing_timer -= delta
 			var progress := 1.0 - (_swing_timer / SWING_TIME)
 			offset = lerpf(-1.3, 1.3, clampf(progress, 0.0, 1.0))
@@ -83,7 +89,7 @@ func _process(delta: float) -> void:
 			offset = 0.6 # máy khác chỉ thấy tư thế vung
 	$SwordPivot.rotation = aim_angle + offset
 	# Chỉ máy của mình mới bật vùng quét kiếm (tránh tính sát thương 2 lần).
-	$SwordPivot/SwordArea.monitoring = swinging and is_multiplayer_authority()
+	$SwordPivot/SwordArea.monitoring = swinging and _controls_mine()
 
 func _start_swing() -> void:
 	swinging = true
@@ -91,7 +97,7 @@ func _start_swing() -> void:
 	_cooldown = ATTACK_COOLDOWN
 
 func _on_sword_body_entered(body: Node2D) -> void:
-	if not is_multiplayer_authority():
+	if not _controls_mine():
 		return
 	if body is Dummy:
 		(body as Dummy).request_damage(ATK)
